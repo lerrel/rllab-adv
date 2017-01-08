@@ -68,21 +68,42 @@ class NormalizedEnv(ProxyEnv, Serializable):
 
     @property
     @overrides
-    def action_space(self):
-        if isinstance(self._wrapped_env.action_space, Box):
-            ub = np.ones(self._wrapped_env.action_space.shape)
+    def pro_action_space(self):
+        if isinstance(self._wrapped_env.pro_action_space, Box):
+            ub = np.ones(self._wrapped_env.pro_action_space.shape)
             return spaces.Box(-1 * ub, ub)
-        return self._wrapped_env.action_space
+        return self._wrapped_env.pro_action_space
+
+    @property
+    @overrides
+    def adv_action_space(self):
+        if isinstance(self._wrapped_env.adv_action_space, Box):
+            ub = np.ones(self._wrapped_env.adv_action_space.shape)
+            return spaces.Box(-1 * ub, ub)
+        return self._wrapped_env.adv_action_space
 
     @overrides
     def step(self, action):
-        if isinstance(self._wrapped_env.action_space, Box):
+        pro_action = action.pro; adv_action = action.adv;
+        scaled_action = action.__class__()
+        if isinstance(self._wrapped_env.pro_action_space, Box):
             # rescale the action
-            lb, ub = self._wrapped_env.action_space.bounds
-            scaled_action = lb + (action + 1.) * 0.5 * (ub - lb)
-            scaled_action = np.clip(scaled_action, lb, ub)
+            lb, ub = self._wrapped_env.pro_action_space.bounds
+            scaled_pro_action = lb + (pro_action + 1.) * 0.5 * (ub - lb)
+            scaled_pro_action = np.clip(scaled_pro_action, lb, ub)
         else:
-            scaled_action = action
+            scaled_pro_action = pro_action
+
+        if isinstance(self._wrapped_env.adv_action_space, Box):
+            # rescale the action
+            lb, ub = self._wrapped_env.adv_action_space.bounds
+            scaled_adv_action = lb + (adv_action + 1.) * 0.5 * (ub - lb)
+            scaled_adv_action = np.clip(scaled_adv_action, lb, ub)
+        else:
+            scaled_adv_action = adv_action
+
+        scaled_action.pro = scaled_pro_action; scaled_action.adv = scaled_adv_action;
+
         wrapped_step = self._wrapped_env.step(scaled_action)
         next_obs, reward, done, info = wrapped_step
         if self._normalize_obs:

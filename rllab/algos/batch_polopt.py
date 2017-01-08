@@ -4,6 +4,7 @@ from rllab.sampler.base import BaseSampler
 import rllab.misc.logger as logger
 import rllab.plotter as plotter
 from rllab.policies.base import Policy
+from copy import deepcopy as copy
 
 
 class BatchSampler(BaseSampler):
@@ -14,18 +15,20 @@ class BatchSampler(BaseSampler):
         self.algo = algo
 
     def start_worker(self):
-        parallel_sampler.populate_task(self.algo.env, self.algo.policy, scope=self.algo.scope)
+        parallel_sampler.populate_task(self.algo.env, self.algo.pro_policy, scope=self.algo.scope, adv_policy=self.algo.adv_policy)
 
     def shutdown_worker(self):
         parallel_sampler.terminate_task(scope=self.algo.scope)
 
     def obtain_samples(self, itr):
-        cur_params = self.algo.policy.get_param_values()
+        cur_pro_params = self.algo.pro_policy.get_param_values()
+        cur_adv_params = self.algo.adv_policy.get_param_values()
         paths = parallel_sampler.sample_paths(
-            policy_params=cur_params,
+            pro_policy_params=cur_pro_params,
             max_samples=self.algo.batch_size,
             max_path_length=self.algo.max_path_length,
             scope=self.algo.scope,
+            adv_policy_params=cur_adv_params
         )
         if self.algo.whole_paths:
             return paths
@@ -43,8 +46,10 @@ class BatchPolopt(RLAlgorithm):
     def __init__(
             self,
             env,
-            policy,
-            baseline,
+            pro_policy,
+            pro_baseline,
+            adv_policy,
+            adv_baseline,
             scope=None,
             n_itr=500,
             start_itr=0,
@@ -60,6 +65,7 @@ class BatchPolopt(RLAlgorithm):
             whole_paths=True,
             sampler_cls=None,
             sampler_args=None,
+            is_protagonist=True,
             **kwargs
     ):
         """
@@ -83,8 +89,10 @@ class BatchPolopt(RLAlgorithm):
         :param store_paths: Whether to save all paths data to the snapshot.
         """
         self.env = env
-        self.policy = policy
-        self.baseline = baseline
+        self.pro_policy = pro_policy
+        self.pro_baseline = pro_baseline
+        self.adv_policy = adv_policy
+        self.adv_baseline = adv_baseline
         self.scope = scope
         self.n_itr = n_itr
         self.current_itr = start_itr
@@ -98,11 +106,20 @@ class BatchPolopt(RLAlgorithm):
         self.positive_adv = positive_adv
         self.store_paths = store_paths
         self.whole_paths = whole_paths
+        self.is_protagonist = is_protagonist
         if sampler_cls is None:
             sampler_cls = BatchSampler
         if sampler_args is None:
             sampler_args = dict()
         self.sampler = sampler_cls(self, **sampler_args)
+        if self.is_protagonist==True:
+            self.policy = self.pro_policy
+            self.baseline = self.pro_baseline
+        else:
+            self.policy = self.adv_policy
+            self.baseline = self.adv_baseline
+        self.start_worker()
+        self.init_opt()
 
     def start_worker(self):
         self.sampler.start_worker()
@@ -113,30 +130,57 @@ class BatchPolopt(RLAlgorithm):
         self.sampler.shutdown_worker()
 
     def train(self):
-        self.start_worker()
-        self.init_opt()
-        for itr in range(self.current_itr, self.n_itr):
-            with logger.prefix('itr #%d | ' % itr):
-                paths = self.sampler.obtain_samples(itr)
+        self.rews = []
+        for itr in range(0, self.n_itr):
+            #with logger.prefix('itr #%d | ' % itr):
+            with logger.prefix(''):
+                logger.log('itr #%d | ' % itr)
+                all_paths = self.sampler.obtain_samples(itr)
+                paths = self.get_agent_paths(all_paths, is_protagonist=self.is_protagonist)
+                #from IPython import embed; embed()
                 samples_data = self.sampler.process_samples(itr, paths)
                 self.log_diagnostics(paths)
                 self.optimize_policy(itr, samples_data)
-                logger.log("saving snapshot...")
+                #logger.log("saving snapshot...")
                 params = self.get_itr_snapshot(itr, samples_data)
                 self.current_itr = itr + 1
                 params["algo"] = self
                 if self.store_paths:
                     params["paths"] = samples_data["paths"]
-                logger.save_itr_params(itr, params)
-                logger.log("saved")
-                logger.dump_tabular(with_prefix=False)
+                #logger.save_itr_params(itr, params)
+                #logger.log("saved")
+                #logger.dump_tabular(with_prefix=False)
+                self.rews.append(self.get_average_reward(paths))
                 if self.plot:
                     self.update_plot()
                     if self.pause_for_plot:
                         input("Plotting evaluation run: Press Enter to "
                                   "continue...")
 
-        self.shutdown_worker()
+        #self.shutdown_worker()
+
+    def get_agent_paths(self, paths, is_protagonist=True):
+        cur_paths = copy(paths)
+        for p in cur_paths:
+            if is_protagonist==True:
+                p['actions']=p.pop('pro_actions')
+                del p['adv_actions']
+                p['agent_infos']=p.pop('pro_agent_infos')
+                del p['adv_agent_infos']
+            else:
+                alpha = -1.0
+                p['actions']=p.pop('adv_actions')
+                del p['pro_actions']
+                p['rewards']=alpha*p['rewards']
+                p['agent_infos']=p.pop('adv_agent_infos')
+                del p['pro_agent_infos']
+        return cur_paths
+
+    def get_average_reward(self, paths):
+        sum_r = 0.0
+        for p in paths:
+            sum_r +=p['rewards'].sum()
+        return sum_r/len(paths)
 
     def log_diagnostics(self, paths):
         self.env.log_diagnostics(paths)

@@ -21,6 +21,7 @@ def initialize(n_parallel):
 
 
 def _get_scoped_G(G, scope):
+    #from IPython import embed;embed()
     if scope is None:
         return G
     if not hasattr(G, "scopes"):
@@ -31,10 +32,13 @@ def _get_scoped_G(G, scope):
     return G.scopes[scope]
 
 
-def _worker_populate_task(G, env, policy, scope=None):
+def _worker_populate_task(G, env, pro_policy, scope=None, adv_policy=None):
     G = _get_scoped_G(G, scope)
     G.env = pickle.loads(env)
-    G.policy = pickle.loads(policy)
+    #G.policy = pickle.loads(policy)
+    G.pro_policy = pickle.loads(pro_policy)
+    if adv_policy is None: G.adv_policy = None
+    else: G.adv_policy = pickle.loads(adv_policy)
 
 
 def _worker_terminate_task(G, scope=None):
@@ -42,23 +46,34 @@ def _worker_terminate_task(G, scope=None):
     if getattr(G, "env", None):
         G.env.terminate()
         G.env = None
-    if getattr(G, "policy", None):
-        G.policy.terminate()
-        G.policy = None
+    #if getattr(G, "policy", None):
+    #    G.policy.terminate()
+    #    G.policy = None
+    if getattr(G, "pro_policy", None):
+        G.pro_policy.terminate()
+        G.pro_policy = None
+    if getattr(G, "adv_policy", None):
+        G.adv_policy.terminate()
+        G.adv_policy = None
 
 
-def populate_task(env, policy, scope=None):
+def populate_task(env, pro_policy, scope=None, adv_policy=None):
     logger.log("Populating workers...")
+    if adv_policy is None: p_adv = None
+    else: p_adv = pickle.dumps(adv_policy)
+
     if singleton_pool.n_parallel > 1:
         singleton_pool.run_each(
             _worker_populate_task,
-            [(pickle.dumps(env), pickle.dumps(policy), scope)] * singleton_pool.n_parallel
+            [(pickle.dumps(env), pickle.dumps(pro_policy), scope, p_adv)] * singleton_pool.n_parallel
         )
     else:
         # avoid unnecessary copying
         G = _get_scoped_G(singleton_pool.G, scope)
         G.env = env
-        G.policy = policy
+        #G.policy = policy
+        G.pro_policy = pro_policy
+        G.adv_policy = adv_policy
     logger.log("Populated")
 
 
@@ -81,9 +96,12 @@ def set_seed(seed):
     )
 
 
-def _worker_set_policy_params(G, params, scope=None):
+def _worker_set_policy_params(G, pro_params, scope=None, adv_params=[]):
     G = _get_scoped_G(G, scope)
-    G.policy.set_param_values(params)
+    #G.policy.set_param_values(params)
+    G.pro_policy.set_param_values(pro_params)
+    #from IPython import embed; embed()
+    if len(adv_params)!=0: G.adv_policy.set_param_values(adv_params)
 
 def _worker_set_env_params(G,params,scope=None):
     G = _get_scoped_G(G, scope)
@@ -91,16 +109,18 @@ def _worker_set_env_params(G,params,scope=None):
 
 def _worker_collect_one_path(G, max_path_length, scope=None):
     G = _get_scoped_G(G, scope)
-    path = rollout(G.env, G.policy, max_path_length)
+    #path = rollout(G.env, G.policy, max_path_length)
+    path = rollout(G.env, G.pro_policy, max_path_length, adv_agent=G.adv_policy)
     return path, len(path["rewards"])
 
 
 def sample_paths(
-        policy_params,
+        pro_policy_params,
         max_samples,
         max_path_length=np.inf,
         env_params=None,
-        scope=None):
+        scope=None,
+        adv_policy_params=None):
     """
     :param policy_params: parameters for the policy. This will be updated on each worker process
     :param max_samples: desired maximum number of samples to be collected. The actual number of collected samples
@@ -111,7 +131,7 @@ def sample_paths(
     """
     singleton_pool.run_each(
         _worker_set_policy_params,
-        [(policy_params, scope)] * singleton_pool.n_parallel
+        [(pro_policy_params, scope, adv_policy_params)] * singleton_pool.n_parallel
     )
     if env_params is not None:
         singleton_pool.run_each(

@@ -30,7 +30,15 @@ class Env(object):
         raise NotImplementedError
 
     @property
-    def action_space(self):
+    def pro_action_space(self):
+        """
+        Returns a Space object
+        :rtype: rllab.spaces.base.Space
+        """
+        raise NotImplementedError
+
+    @property
+    def adv_action_space(self):
         """
         Returns a Space object
         :rtype: rllab.spaces.base.Space
@@ -47,8 +55,12 @@ class Env(object):
 
     # Helpers that derive from Spaces
     @property
-    def action_dim(self):
-        return self.action_space.flat_dim
+    def pro_action_dim(self):
+        return self.pro_action_space.flat_dim
+
+    @property
+    def adv_action_dim(self):
+        return self.adv_action_space.flat_dim
 
     def render(self):
         pass
@@ -63,7 +75,8 @@ class Env(object):
     def spec(self):
         return EnvSpec(
             observation_space=self.observation_space,
-            action_space=self.action_space,
+            pro_action_space=self.pro_action_space,
+            adv_action_space=self.adv_action_space
         )
 
     @property

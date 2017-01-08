@@ -1,0 +1,7 @@
+python train_trpo_adversary.py --env InvertedPendulumAdv-v1 --adv_name adv --n_exps 5 --n_itr 100 --layer_size 32 32 --batch_size 4000 --if_render 0
+python train_trpo_adversary.py --env InvertedPendulumAdv-v1 --adv_name no_adv --n_exps 5 --n_itr 100 --layer_size 32 32 --batch_size 4000 --if_render 0
+
+python train_trpo_adversary.py --env HumanoidAdv-v1 --adv_name adv --n_exps 3 --n_itr 1000 --layer_size 100 100 100 --batch_size 4000 --if_render 0
+python train_trpo_adversary.py --env HumanoidAdv-v1 --adv_name no_adv --n_exps 3 --n_itr 1000 --layer_size 100 100 100 --batch_size 4000 --if_render 0
+
+

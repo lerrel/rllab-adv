@@ -30,16 +30,23 @@ class NPO(BatchPolopt):
         super(NPO, self).__init__(**kwargs)
 
     @overrides
-    def init_opt(self):
+    def init_opt(self, is_protagonist=True):
         is_recurrent = int(self.policy.recurrent)
         obs_var = self.env.observation_space.new_tensor_variable(
             'obs',
             extra_dims=1 + is_recurrent,
         )
-        action_var = self.env.action_space.new_tensor_variable(
-            'action',
-            extra_dims=1 + is_recurrent,
-        )
+        if is_protagonist==True:
+            action_var = self.env.pro_action_space.new_tensor_variable(
+                'action',
+                extra_dims=1 + is_recurrent,
+            )
+        else:
+            action_var = self.env.adv_action_space.new_tensor_variable(
+                'action',
+                extra_dims=1 + is_recurrent,
+            )
+
         advantage_var = ext.new_tensor(
             'advantage',
             ndim=1 + is_recurrent,
