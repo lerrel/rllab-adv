@@ -162,7 +162,8 @@ for ne in range(n_exps):
                          'zero_test': const_test_rew_summary,
                          'rand_test': rand_test_rew_summary,
                          'iter_save': ni,
-                         'adv_test': adv_test_rew_summary}, open(save_name+'.temp'.format(ni),'wb'))
+                         'exp_save': ne,
+                         'adv_test': adv_test_rew_summary}, open(save_name+'.temp','wb'))
 
     ## Shutting down the optimizer ##
     pro_algo.shutdown_worker()
