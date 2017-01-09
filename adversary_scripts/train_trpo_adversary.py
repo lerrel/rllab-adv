@@ -27,6 +27,7 @@ parser.add_argument('--n_pro_itr', type=int, default=1, help='')
 parser.add_argument('--n_adv_itr', type=int, default=1, help='')
 parser.add_argument('--batch_size', type=int, default=4000, help='')
 parser.add_argument('--filename_append', type=str, default='', help='stuff to append to save filename')
+parser.add_argument('--save_every', type=int, default=100, help='')
 
 args = parser.parse_args()
 
@@ -42,6 +43,7 @@ n_itr = args.n_itr
 n_pro_itr = args.n_pro_itr
 n_adv_itr = args.n_adv_itr
 batch_size = args.batch_size
+save_every = args.save_every
 
 const_test_rew_summary = []
 rand_test_rew_summary = []
@@ -152,6 +154,15 @@ for ne in range(n_exps):
         adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
         if ni%afterRender==0 and ifRender==True:
             test_const_adv(env, pro_policy, path_length=path_length, n_traj=1, render=True);
+        if ni!=0 and ni%save_every==0:
+            ## SAVING INFO ##
+            pickle.dump({'args': args,
+                         'pro_policy': pro_policy,
+                         'adv_policy': adv_policy,
+                         'zero_test': const_test_rew_summary,
+                         'rand_test': rand_test_rew_summary,
+                         'iter_save': ni,
+                         'adv_test': adv_test_rew_summary}, open(save_name+'.temp'.format(ni),'wb'))
 
     ## Shutting down the optimizer ##
     pro_algo.shutdown_worker()

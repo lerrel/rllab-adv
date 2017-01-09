@@ -41,6 +41,6 @@ green_patch = mpatches.Patch(color=(0.,1.,0.), label='Testing with random advers
 blue_patch = mpatches.Patch(color=(0.,0.,1.), label='Testing with learnt adversary')
 plt.legend(handles=[red_patch,green_patch,blue_patch])
 axes = plt.gca()
-#axes.set_ylim([0,4000])
+axes.set_ylim([-500,4000])
 plt.title(savename)
 plt.show()
