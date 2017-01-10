@@ -81,5 +81,8 @@ class Parameterized(object):
         Serializable.__setstate__(self, d)
         global load_params
         if load_params:
-            self.set_param_values(d["params"])
+            try:
+                self.set_param_values(d["params"])
+            except:
+                pass
 

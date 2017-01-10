@@ -12,6 +12,7 @@ import numpy as np
 from test import test_const_adv, test_rand_adv, test_learnt_adv
 import pickle
 import argparse
+import os
 
 ## Pass arguments ##
 parser = argparse.ArgumentParser()
@@ -28,6 +29,7 @@ parser.add_argument('--n_adv_itr', type=int, default=1, help='')
 parser.add_argument('--batch_size', type=int, default=4000, help='')
 parser.add_argument('--filename_append', type=str, default='', help='stuff to append to save filename')
 parser.add_argument('--save_every', type=int, default=100, help='')
+parser.add_argument('--n_process', type=int, default=16, help='')
 
 args = parser.parse_args()
 
@@ -44,12 +46,13 @@ n_pro_itr = args.n_pro_itr
 n_adv_itr = args.n_adv_itr
 batch_size = args.batch_size
 save_every = args.save_every
+n_process = args.n_process
 
 const_test_rew_summary = []
 rand_test_rew_summary = []
 adv_test_rew_summary = []
 save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}'.format(env_name, adv_name, n_exps, n_itr, batch_size)
-save_dir = 'results'
+save_dir = os.environ['HOME']+'/results'
 fig_dir = 'figs'
 save_name = save_dir+'/'+save_prefix+'.p'
 fig_name = fig_dir+'/'+save_prefix+'.png'
@@ -83,7 +86,7 @@ for ne in range(n_exps):
 
     ## Optimizer for the Protagonist ##
     from rllab.sampler import parallel_sampler
-    parallel_sampler.initialize(1)
+    parallel_sampler.initialize(n_process)
     if adv_name=='adv':
         pro_algo = TRPO(
             env=env,
