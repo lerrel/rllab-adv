@@ -13,6 +13,7 @@ from test import test_const_adv, test_rand_adv, test_learnt_adv
 import pickle
 import argparse
 import os
+import gym
 
 ## Pass arguments ##
 parser = argparse.ArgumentParser()
@@ -29,7 +30,8 @@ parser.add_argument('--n_adv_itr', type=int, default=1, help='')
 parser.add_argument('--batch_size', type=int, default=4000, help='')
 parser.add_argument('--filename_append', type=str, default='', help='stuff to append to save filename')
 parser.add_argument('--save_every', type=int, default=100, help='')
-parser.add_argument('--n_process', type=int, default=16, help='')
+parser.add_argument('--n_process', type=int, default=16, help='Number of threads for sampling environment')
+parser.add_argument('--adv_fraction', type=float, default=1.0, help='fraction of maximum adversarial force to be applied')
 
 args = parser.parse_args()
 
@@ -47,19 +49,24 @@ n_adv_itr = args.n_adv_itr
 batch_size = args.batch_size
 save_every = args.save_every
 n_process = args.n_process
+adv_fraction = args.adv_fraction
 
 const_test_rew_summary = []
 rand_test_rew_summary = []
 adv_test_rew_summary = []
-save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}'.format(env_name, adv_name, n_exps, n_itr, batch_size)
-save_dir = os.environ['HOME']+'/results'
+save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction)
+save_dir = os.environ['HOME']+'/results/variable_adversary'
 fig_dir = 'figs'
 save_name = save_dir+'/'+save_prefix+'.p'
 fig_name = fig_dir+'/'+save_prefix+'.png'
 
 for ne in range(n_exps):
     ## Environment definition ##
-    env = normalize(GymEnv(env_name))
+    E = gym.make(env_name)
+    def_adv = E.adv_action_space.high[0]
+    new_adv = def_adv*adv_fraction
+    E.update_adversary(new_adv)
+    env = normalize(GymEnv(E))
 
     ## Protagonist policy definition ##
     pro_policy = GaussianMLPPolicy(
@@ -184,4 +191,3 @@ pickle.dump({'args': args,
              'adv_test': adv_test_rew_summary}, open(save_name,'wb'))
 
 logger.log('\n\n\n#### DONE ####\n\n\n')
-embed()
