@@ -14,6 +14,6 @@ do
     do
         PROCSTRING="$env-$adv_fraction"
         echo $PROCSTRING
-        qsub -N ${PROCSTRING} -l nodes=1:ppn=8 -l walltime=99:99:99:99 ${LOGSTRING} -v env=${env},adv_fraction=${adv_fraction},PROCSTRING=${PROCSTRING} yoda_rl_no_adv_driver.sh
+        qsub -N ${PROCSTRING} -q reg-mem -l nodes=1:ppn=8 -l walltime=99:99:99:99 ${LOGSTRING} -v env=${env},adv_fraction=${adv_fraction},PROCSTRING=${PROCSTRING} yoda_rl_no_adv_driver.sh
     done
 done
