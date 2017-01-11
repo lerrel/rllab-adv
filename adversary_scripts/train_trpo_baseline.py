@@ -88,7 +88,7 @@ for ne in range(n_exps):
             pro_policy=pro_policy,
             adv_policy=zero_adv_policy,
             pro_baseline=pro_baseline,
-            adv_baseline=adv_baseline,
+            adv_baseline=pro_baseline,
             batch_size=batch_size,
             max_path_length=path_length,
             n_itr=n_pro_itr,
