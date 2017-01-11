@@ -17,11 +17,13 @@ if_filtering = bool(args.f)
 res_D = pickle.load(open(savename,'rb'))
 const_test_rew_summary = res_D['zero_test']
 rand_test_rew_summary = res_D['rand_test']
+step_test_rew_summary = res_D['step_test']
+rand_step_test_rew_summary = res_D['rand_step_test']
 adv_test_rew_summary = res_D['adv_test']
 
-plot_tests = [const_test_rew_summary, rand_test_rew_summary, adv_test_rew_summary]
-plot_names = ['zero_test_rew_summary', 'rand_test_rew_summary', 'adv_test_rew_summary']
-plot_colors = [(0.5,0.1,0.1), (0.1,0.5,0.1), (0.1,0.1,0.5)]
+plot_tests = [const_test_rew_summary, rand_test_rew_summary, step_test_rew_summary, rand_step_test_rew_summary, adv_test_rew_summary]
+plot_names = ['zero_test_rew_summary', 'rand_test_rew_summary', 'step_test_rew_summary', 'rand_step_test_rew_summary', 'adv_test_rew_summary']
+plot_colors = [(0.5,0.1,0.1), (0.1,0.5,0.1), (0.5,0.5,0.1), (0.1,0.5,0.5), (0.1,0.1,0.5)]
 all_patches = []
 for i in range(len(plot_tests)):
     con_rew = np.array(plot_tests[i])

@@ -5,11 +5,12 @@ from rllab.envs.normalized_env import normalize
 from rllab.policies.gaussian_mlp_policy import GaussianMLPPolicy
 from rllab.policies.random_uniform_control_policy import RandomUniformControlPolicy
 from rllab.policies.constant_control_policy import ConstantControlPolicy
+from rllab.policies.step_control_policy import StepControlPolicy
 from IPython import embed
 import matplotlib.pyplot as plt
 import rllab.misc.logger as logger
 import numpy as np
-from test import test_const_adv, test_rand_adv, test_learnt_adv
+from test import test_const_adv, test_rand_adv, test_learnt_adv, test_rand_step_adv, test_step_adv
 import pickle
 import argparse
 import os
@@ -53,6 +54,8 @@ adv_fraction = args.adv_fraction
 
 const_test_rew_summary = []
 rand_test_rew_summary = []
+step_test_rew_summary = []
+rand_step_test_rew_summary = []
 adv_test_rew_summary = []
 save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction)
 save_dir = os.environ['HOME']+'/results/variable_adversary'
@@ -63,7 +66,6 @@ fig_name = fig_dir+'/'+save_prefix+'.png'
 for ne in range(n_exps):
     ## Environment definition ##
     env = normalize(GymEnv(env_name, adv_fraction))
-    embed()
     ## Protagonist policy definition ##
     pro_policy = GaussianMLPPolicy(
         env_spec=env.spec,
@@ -144,6 +146,10 @@ for ne in range(n_exps):
     const_testing_rews.append(test_const_adv(env, pro_policy, path_length=path_length))
     rand_testing_rews = []
     rand_testing_rews.append(test_rand_adv(env, pro_policy, path_length=path_length))
+    step_testing_rews = []
+    step_testing_rews.append(test_step_adv(env, pro_policy, path_length=path_length))
+    rand_step_testing_rews = []
+    rand_step_testing_rews.append(test_rand_step_adv(env, pro_policy, path_length=path_length))
     adv_testing_rews = []
     adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
     #embed()
@@ -157,6 +163,8 @@ for ne in range(n_exps):
         logger.log('Advers Reward: {}'.format(np.array(adv_algo.rews).mean()))
         const_testing_rews.append(test_const_adv(env, pro_policy, path_length=path_length))
         rand_testing_rews.append(test_rand_adv(env, pro_policy, path_length=path_length))
+        step_testing_rews.append(test_step_adv(env, pro_policy, path_length=path_length))
+        rand_step_testing_rews.append(test_rand_step_adv(env, pro_policy, path_length=path_length))
         adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
         if ni%afterRender==0 and ifRender==True:
             test_const_adv(env, pro_policy, path_length=path_length, n_traj=1, render=True);
@@ -167,6 +175,8 @@ for ne in range(n_exps):
                          'adv_policy': adv_policy,
                          'zero_test': const_test_rew_summary,
                          'rand_test': rand_test_rew_summary,
+                         'step_test': step_test_rew_summary,
+                         'rand_step_test': rand_step_test_rew_summary,
                          'iter_save': ni,
                          'exp_save': ne,
                          'adv_test': adv_test_rew_summary}, open(save_name+'.temp','wb'))
@@ -176,6 +186,8 @@ for ne in range(n_exps):
     adv_algo.shutdown_worker()
     const_test_rew_summary.append(const_testing_rews)
     rand_test_rew_summary.append(rand_testing_rews)
+    step_test_rew_summary.append(step_testing_rews)
+    rand_step_test_rew_summary.append(rand_step_testing_rews)
     adv_test_rew_summary.append(adv_testing_rews)
 
 ## SAVING INFO ##
@@ -184,6 +196,8 @@ pickle.dump({'args': args,
              'adv_policy': adv_policy,
              'zero_test': const_test_rew_summary,
              'rand_test': rand_test_rew_summary,
+             'step_test': step_test_rew_summary,
+             'rand_step_test': rand_step_test_rew_summary,
              'adv_test': adv_test_rew_summary}, open(save_name,'wb'))
 
 logger.log('\n\n\n#### DONE ####\n\n\n')
