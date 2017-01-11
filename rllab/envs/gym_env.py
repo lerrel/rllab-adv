@@ -43,7 +43,7 @@ class NoVideoSchedule(object):
 
 
 class GymEnv(Env, Serializable):
-    def __init__(self, env_name, record_video=True, video_schedule=None, log_dir=None, record_log=True):
+    def __init__(self, env_name, adv_fraction=1.0, record_video=True, video_schedule=None, log_dir=None, record_log=True):
         if log_dir is None:
             if logger.get_snapshot_dir() is None:
                 logger.log("Warning: skipping Gym environment monitoring since snapshot_dir not configured.")
@@ -51,10 +51,10 @@ class GymEnv(Env, Serializable):
                 log_dir = os.path.join(logger.get_snapshot_dir(), "gym_log")
         Serializable.quick_init(self, locals())
 
-        if type(env_name) is str:
-            env = gym.envs.make(env_name)
-        else:
-            env = env_name
+        env = gym.envs.make(env_name)
+        def_adv = env.adv_action_space.high[0]
+        new_adv = def_adv*adv_fraction
+        env.update_adversary(new_adv)
         self.env = env
         self.env_id = env.spec.id
 

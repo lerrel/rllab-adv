@@ -62,12 +62,8 @@ fig_name = fig_dir+'/'+save_prefix+'.png'
 
 for ne in range(n_exps):
     ## Environment definition ##
-    E = gym.make(env_name)
-    def_adv = E.adv_action_space.high[0]
-    new_adv = def_adv*adv_fraction
-    E.update_adversary(new_adv)
-    env = normalize(GymEnv(E))
-
+    env = normalize(GymEnv(env_name, adv_fraction))
+    embed()
     ## Protagonist policy definition ##
     pro_policy = GaussianMLPPolicy(
         env_spec=env.spec,
@@ -152,7 +148,7 @@ for ne in range(n_exps):
     adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
     #embed()
     for ni in range(n_itr):
-        logger.log('\n\n\n####expNO{}_{} global itr# {}####\n\n\n'.format(ne,,adv_name,ni))
+        logger.log('\n\n\n####expNO{}_{} global itr# {}####\n\n\n'.format(ne,adv_name,ni))
         pro_algo.train()
         pro_rews += pro_algo.rews; all_rews += pro_algo.rews;
         logger.log('Protag Reward: {}'.format(np.array(pro_algo.rews).mean()))
@@ -173,6 +169,7 @@ for ne in range(n_exps):
                          'rand_test': rand_test_rew_summary,
                          'iter_save': ni,
                          'exp_save': ne,
+                         'new_adv': new_adv,	
                          'adv_test': adv_test_rew_summary}, open(save_name+'.temp','wb'))
 
     ## Shutting down the optimizer ##
@@ -188,6 +185,7 @@ pickle.dump({'args': args,
              'adv_policy': adv_policy,
              'zero_test': const_test_rew_summary,
              'rand_test': rand_test_rew_summary,
+             'new_adv': new_adv,	
              'adv_test': adv_test_rew_summary}, open(save_name,'wb'))
 
 logger.log('\n\n\n#### DONE ####\n\n\n')

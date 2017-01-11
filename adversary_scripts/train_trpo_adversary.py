@@ -145,7 +145,7 @@ for ne in range(n_exps):
     adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
     #embed()
     for ni in range(n_itr):
-        logger.log('\n\n\n####expNO{}_{} global itr# {}####\n\n\n'.format(ne,,adv_name,ni))
+        logger.log('\n\n\n####expNO{}_{} global itr# {}####\n\n\n'.format(ne,adv_name,ni))
         pro_algo.train()
         pro_rews += pro_algo.rews; all_rews += pro_algo.rews;
         logger.log('Protag Reward: {}'.format(np.array(pro_algo.rews).mean()))
