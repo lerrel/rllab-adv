@@ -22,7 +22,7 @@ parser.add_argument('--env', type=str, required=True, help='Name of adversarial 
 parser.add_argument('--adv_name', type=str, required=True, help='adv if training with adversary, no_adv if training without adversary')
 parser.add_argument('--path_length', type=int, default=1000, help='maximum episode length')
 parser.add_argument('--layer_size', nargs='+', type=int, default=[100,100,100], help='layer definition')
-parser.add_argument('--if_render', type=int, default=1, help='Should we animate at all?')
+parser.add_argument('--if_render', type=int, default=0, help='Should we animate at all?')
 parser.add_argument('--after_render', type=int, default=100, help='After how many to animate')
 parser.add_argument('--n_exps', type=int, default=3, help='')
 parser.add_argument('--n_itr', type=int, default=100, help='')
@@ -33,6 +33,8 @@ parser.add_argument('--filename_append', type=str, default='', help='stuff to ap
 parser.add_argument('--save_every', type=int, default=100, help='')
 parser.add_argument('--n_process', type=int, default=16, help='Number of threads for sampling environment')
 parser.add_argument('--adv_fraction', type=float, default=1.0, help='fraction of maximum adversarial force to be applied')
+parser.add_argument('--step_size', type=float, default=0.01, help='step size for learner')
+parser.add_argument('--gae_lambda', type=float, default=0.97, help='gae_lambda for learner')
 
 args = parser.parse_args()
 
@@ -51,13 +53,15 @@ batch_size = args.batch_size
 save_every = args.save_every
 n_process = args.n_process
 adv_fraction = args.adv_fraction
+step_size = args.step_size
+gae_lambda = args.gae_lambda
 
 const_test_rew_summary = []
 rand_test_rew_summary = []
 step_test_rew_summary = []
 rand_step_test_rew_summary = []
 adv_test_rew_summary = []
-save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction)
+save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}_stp{}_lam{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction, step_size, gae_lambda)
 save_dir = os.environ['HOME']+'/results/variable_adversary'
 fig_dir = 'figs'
 save_name = save_dir+'/'+save_prefix+'.p'
@@ -102,8 +106,9 @@ for ne in range(n_exps):
             batch_size=batch_size,
             max_path_length=path_length,
             n_itr=n_pro_itr,
-            discount=0.99,
-            step_size=0.01,
+            discount=0.995,
+            gae_lambda=gae_lambda,
+            step_size=step_size,
             is_protagonist=True
         )
     elif adv_name=='no_adv':
@@ -116,8 +121,9 @@ for ne in range(n_exps):
             batch_size=batch_size,
             max_path_length=path_length,
             n_itr=n_pro_itr,
-            discount=0.99,
-            step_size=0.01,
+            discount=0.995,
+            gae_lambda=gae_lambda,
+            step_size=step_size,
             is_protagonist=True
         )
 
@@ -131,8 +137,9 @@ for ne in range(n_exps):
         batch_size=batch_size,
         max_path_length=path_length,
         n_itr=n_adv_itr,
-        discount=0.99,
-        step_size=0.01,
+        discount=0.995,
+        gae_lambda=gae_lambda,
+        step_size=step_size,
         is_protagonist=False,
         scope='adversary_optim'
     )
