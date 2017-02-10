@@ -20,7 +20,7 @@ import random
 ## Pass arguments ##
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, required=True, help='Name of adversarial environment')
-parser.add_argument('--adv_name', type=str, required=True, help='adv if training with adversary, no_adv if training without adversary')
+parser.add_argument('--adv_name', type=str, default='adv', help='DOESNT MATTER, always adv')
 parser.add_argument('--path_length', type=int, default=1000, help='maximum episode length')
 parser.add_argument('--layer_size', nargs='+', type=int, default=[100,100,100], help='layer definition')
 parser.add_argument('--if_render', type=int, default=0, help='Should we animate at all?')
@@ -41,7 +41,7 @@ args = parser.parse_args()
 
 ## Number of experiments to run ##
 env_name = args.env
-adv_name = args.adv_name
+adv_name = 'adv'
 path_length = args.path_length
 layer_size = tuple(args.layer_size)
 ifRender = bool(args.if_render)
@@ -63,7 +63,7 @@ rand_test_rew_summary = []
 step_test_rew_summary = []
 rand_step_test_rew_summary = []
 adv_test_rew_summary = []
-save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}_stp{}_lam{}_{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction, step_size, gae_lambda, random.randint(0,1000000))
+save_prefix = 'MULTIPLE_ADVERSARIES_env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}_stp{}_lam{}_{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction, step_size, gae_lambda, random.randint(0,1000000))
 fig_dir = 'figs'
 save_name = save_dir+'/'+save_prefix+'.p'
 fig_name = fig_dir+'/'+save_prefix+'.png'
@@ -71,7 +71,6 @@ fig_name = fig_dir+'/'+save_prefix+'.png'
 for ne in range(n_exps):
     ## Environment definition ##
     env = normalize(GymEnv(env_name, adv_fraction))
-    env_orig = normalize(GymEnv(env_name, 1.0))
     ## Protagonist policy definition ##
     pro_policy = GaussianMLPPolicy(
         env_spec=env.spec,
@@ -80,29 +79,58 @@ for ne in range(n_exps):
     )
     pro_baseline = LinearFeatureBaseline(env_spec=env.spec)
 
+    ## ADVERSARY POLICIES TO CONSIDER ##
+
     ## Zero Adversary for the protagonist training ##
     zero_adv_policy = ConstantControlPolicy(
         env_spec=env.spec,
         is_protagonist=False,
         constant_val = 0.0
     )
-
+    ## Random Adversary for the protagonist training ##
+    rand_adv_policy = RandomUniformControlPolicy(
+        env_spec=env.spec,
+        is_protagonist=False,
+    )
+    ## Rand Step Adversary for the protagonist training ##
+    characteristic_length = path_length/5
+    step = path_length/10
+    rand_step_adv_policy = StepControlPolicy(
+        env_spec=env.spec,
+        characteristic_length=characteristic_length,
+        step_size=step,
+        is_random_mag=True,
+        is_protagonist=False,
+    )
+    ## Step Adversary for the protagonist training ##
+    characteristic_length = path_length/5
+    step = path_length/10
+    step_adv_policy = StepControlPolicy(
+        env_spec=env.spec,
+        characteristic_length=characteristic_length,
+        step_size=step,
+        is_random_mag=False,
+        is_protagonist=False,
+    )
     ## Adversary policy definition ##
     adv_policy = GaussianMLPPolicy(
         env_spec=env.spec,
         hidden_sizes=layer_size,
         is_protagonist=False
     )
+    protagonist_adversary_list = [zero_adv_policy, rand_adv_policy, rand_step_adv_policy, step_adv_policy, adv_policy] 
+ 
     adv_baseline = LinearFeatureBaseline(env_spec=env.spec)
 
     ## Optimizer for the Protagonist ##
     from rllab.sampler import parallel_sampler
     parallel_sampler.initialize(n_process)
-    if adv_name=='adv':
+    protagonist_algos = []
+    for pro_adv in protagonist_adversary_list:
         pro_algo = TRPO(
             env=env,
             pro_policy=pro_policy,
-            adv_policy=adv_policy,
+            adv_policy=pro_adv,
             pro_baseline=pro_baseline,
             adv_baseline=adv_baseline,
             batch_size=batch_size,
@@ -113,21 +141,7 @@ for ne in range(n_exps):
             step_size=step_size,
             is_protagonist=True
         )
-    elif adv_name=='no_adv':
-        pro_algo = TRPO(
-            env=env,
-            pro_policy=pro_policy,
-            adv_policy=zero_adv_policy,
-            pro_baseline=pro_baseline,
-            adv_baseline=adv_baseline,
-            batch_size=batch_size,
-            max_path_length=path_length,
-            n_itr=n_pro_itr,
-            discount=0.995,
-            gae_lambda=gae_lambda,
-            step_size=step_size,
-            is_protagonist=True
-        )
+        protagonist_algos.append(pro_algo)
 
     ## Optimizer for the Adversary ##
     adv_algo = TRPO(
@@ -152,17 +166,20 @@ for ne in range(n_exps):
     adv_rews = []
     all_rews = []
     const_testing_rews = []
-    const_testing_rews.append(test_const_adv(env_orig, pro_policy, path_length=path_length))
+    const_testing_rews.append(test_const_adv(env, pro_policy, path_length=path_length))
     rand_testing_rews = []
-    rand_testing_rews.append(test_rand_adv(env_orig, pro_policy, path_length=path_length))
+    rand_testing_rews.append(test_rand_adv(env, pro_policy, path_length=path_length))
     step_testing_rews = []
-    step_testing_rews.append(test_step_adv(env_orig, pro_policy, path_length=path_length))
+    step_testing_rews.append(test_step_adv(env, pro_policy, path_length=path_length))
     rand_step_testing_rews = []
-    rand_step_testing_rews.append(test_rand_step_adv(env_orig, pro_policy, path_length=path_length))
+    rand_step_testing_rews.append(test_rand_step_adv(env, pro_policy, path_length=path_length))
     adv_testing_rews = []
     adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
-    #embed()
+
+    algo_looper = 0
     for ni in range(n_itr):
+        pro_algo = protagonist_algos[algo_looper]
+        algo_looper = (algo_looper+1)%len(protagonist_algos)
         logger.log('\n\n\n####expNO{}_{} global itr# {}####\n\n\n'.format(ne,adv_name,ni))
         pro_algo.train()
         pro_rews += pro_algo.rews; all_rews += pro_algo.rews;

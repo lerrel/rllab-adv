@@ -13,7 +13,7 @@ def test_const_adv(env, protag_policy, path_length=100, n_traj=5, render=False):
     paths = []
     sum_rewards = 0.0
     for _ in range(n_traj):
-        path = rollout(env, protag_policy, path_length, adv_agent=const_adv_policy, animated=render)
+        path = rollout(env, protag_policy, path_length, adv_agent=const_adv_policy, animated=render, test=True)
         sum_rewards += path['rewards'].sum()
         paths.append(path)
     avg_rewards = sum_rewards/n_traj
@@ -27,7 +27,7 @@ def test_rand_adv(env, protag_policy, path_length=100, n_traj=5, render=False):
     paths = []
     sum_rewards = 0.0
     for _ in range(n_traj):
-        path = rollout(env, protag_policy, path_length, adv_agent=adv_policy, animated=render)
+        path = rollout(env, protag_policy, path_length, adv_agent=adv_policy, animated=render, test=True)
         sum_rewards += path['rewards'].sum()
         paths.append(path)
     avg_rewards = sum_rewards/n_traj
@@ -37,7 +37,7 @@ def test_rand_step_adv(env, protag_policy, path_length=100, n_traj=5, render=Fal
     paths = []
     sum_rewards = 0.0
     characteristic_length = path_length/5
-    step_size = path_length/50
+    step_size = path_length/10
     for _ in range(n_traj):
         adv_policy = StepControlPolicy(
             env_spec=env.spec,
@@ -46,7 +46,7 @@ def test_rand_step_adv(env, protag_policy, path_length=100, n_traj=5, render=Fal
             is_random_mag=True,
             is_protagonist=False,
         )
-        path = rollout(env, protag_policy, path_length, adv_agent=adv_policy, animated=render)
+        path = rollout(env, protag_policy, path_length, adv_agent=adv_policy, animated=render, test=True)
         sum_rewards += path['rewards'].sum()
         paths.append(path)
     avg_rewards = sum_rewards/n_traj
@@ -56,7 +56,7 @@ def test_step_adv(env, protag_policy, path_length=100, n_traj=5, render=False):
     paths = []
     sum_rewards = 0.0
     characteristic_length = path_length/5
-    step_size = path_length/50
+    step_size = path_length/10
     for _ in range(n_traj):
         adv_policy = StepControlPolicy(
             env_spec=env.spec,
@@ -65,7 +65,7 @@ def test_step_adv(env, protag_policy, path_length=100, n_traj=5, render=False):
             is_random_mag=False,
             is_protagonist=False,
         )
-        path = rollout(env, protag_policy, path_length, adv_agent=adv_policy, animated=render)
+        path = rollout(env, protag_policy, path_length, adv_agent=adv_policy, animated=render, test=True)
         sum_rewards += path['rewards'].sum()
         paths.append(path)
     avg_rewards = sum_rewards/n_traj
@@ -76,7 +76,7 @@ def test_learnt_adv(env, protag_policy, adv_policy, path_length=100, n_traj=5, r
     paths = []
     sum_rewards = 0.0
     for _ in range(n_traj):
-        path = rollout(env, protag_policy, path_length, adv_agent=adv_policy, animated=render)
+        path = rollout(env, protag_policy, path_length, adv_agent=adv_policy, animated=render, test=True)
         sum_rewards += path['rewards'].sum()
         paths.append(path)
     avg_rewards = sum_rewards/n_traj

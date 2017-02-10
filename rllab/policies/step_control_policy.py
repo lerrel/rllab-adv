@@ -24,6 +24,7 @@ class StepControlPolicy(Policy, Serializable):
         self._step_size = step_size
         self._step_val = None
         self._is_random_mag = is_random_mag
+        self._cached_params={}
 
     @overrides
     def get_action(self, observation):

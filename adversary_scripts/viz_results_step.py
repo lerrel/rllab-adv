@@ -43,6 +43,6 @@ for i in range(len(plot_tests)):
 
 plt.legend(handles=all_patches)
 axes = plt.gca()
-axes.set_ylim([-500,4000])
+axes.set_ylim([-500,6000])
 plt.title(savename)
 plt.show()

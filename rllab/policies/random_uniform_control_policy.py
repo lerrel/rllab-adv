@@ -18,6 +18,7 @@ class RandomUniformControlPolicy(Policy, Serializable):
         self._action_space = cur_action_space
         #assert isinstance(self.action_space, Box)
         #super(UniformControlPolicy, self).__init__(env_spec=env_spec)
+        self._cached_params={}
 
     @overrides
     def get_action(self, observation):
