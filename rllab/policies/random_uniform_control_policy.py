@@ -27,6 +27,9 @@ class RandomUniformControlPolicy(Policy, Serializable):
     def get_params_internal(self, **tags):
         return []
 
+    def get_param_values(self, **tags):
+        return []
+
     def get_actions(self, observations):
         all_samples = []
         for obs in observations:

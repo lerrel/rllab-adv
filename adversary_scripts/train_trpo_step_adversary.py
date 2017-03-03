@@ -15,6 +15,7 @@ import pickle
 import argparse
 import os
 import gym
+import random
 
 ## Pass arguments ##
 parser = argparse.ArgumentParser()
@@ -29,13 +30,12 @@ parser.add_argument('--n_itr', type=int, default=100, help='')
 parser.add_argument('--n_pro_itr', type=int, default=1, help='')
 parser.add_argument('--n_adv_itr', type=int, default=1, help='')
 parser.add_argument('--batch_size', type=int, default=4000, help='')
-parser.add_argument('--filename_append', type=str, default='', help='stuff to append to save filename')
 parser.add_argument('--save_every', type=int, default=100, help='')
 parser.add_argument('--n_process', type=int, default=16, help='Number of threads for sampling environment')
 parser.add_argument('--adv_fraction', type=float, default=1.0, help='fraction of maximum adversarial force to be applied')
 parser.add_argument('--step_size', type=float, default=0.01, help='step size for learner')
 parser.add_argument('--gae_lambda', type=float, default=0.97, help='gae_lambda for learner')
-parser.add_argument('--adv_step', type=int, default=100, help='train adversary every adv_steps')
+parser.add_argument('--folder', type=str, default=os.environ['HOME']+'/results/step_adversary', help='folder to save result in')
 
 args = parser.parse_args()
 
@@ -56,15 +56,14 @@ n_process = args.n_process
 adv_fraction = args.adv_fraction
 step_size = args.step_size
 gae_lambda = args.gae_lambda
-adv_step = args.adv_step
+save_dir = args.folder 
 
 const_test_rew_summary = []
 rand_test_rew_summary = []
 step_test_rew_summary = []
 rand_step_test_rew_summary = []
 adv_test_rew_summary = []
-save_prefix = 'STEP_env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}_stp{}_lam{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction, step_size, gae_lambda)
-save_dir = os.environ['HOME']+'/results/variable_adversary'
+save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}_stp{}_lam{}_{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction, step_size, gae_lambda, random.randint(0,1000000))
 fig_dir = 'figs'
 save_name = save_dir+'/'+save_prefix+'.p'
 fig_name = fig_dir+'/'+save_prefix+'.png'
@@ -72,6 +71,7 @@ fig_name = fig_dir+'/'+save_prefix+'.png'
 for ne in range(n_exps):
     ## Environment definition ##
     env = normalize(GymEnv(env_name, adv_fraction))
+    env_orig = normalize(GymEnv(env_name, 1.0))
     ## Protagonist policy definition ##
     pro_policy = GaussianMLPPolicy(
         env_spec=env.spec,
@@ -88,9 +88,10 @@ for ne in range(n_exps):
     )
 
     ## Adversary policy definition ##
-    adv_policy = GaussianMLPPolicy(
+    adv_policy = StepControlPolicy(
         env_spec=env.spec,
-        hidden_sizes=layer_size,
+	characteristic_length=path_length/5.0,
+	step_size=path_length/10.0,
         is_protagonist=False
     )
     adv_baseline = LinearFeatureBaseline(env_spec=env.spec)
@@ -129,36 +130,19 @@ for ne in range(n_exps):
             is_protagonist=True
         )
 
-    ## Optimizer for the Adversary ##
-    adv_algo = TRPO(
-        env=env,
-        pro_policy=pro_policy,
-        adv_policy=adv_policy,
-        pro_baseline=pro_baseline,
-        adv_baseline=adv_baseline,
-        batch_size=batch_size,
-        max_path_length=path_length,
-        n_itr=n_adv_itr,
-        discount=0.995,
-        gae_lambda=gae_lambda,
-        step_size=step_size,
-        is_protagonist=False,
-        scope='adversary_optim'
-    )
-
     ## Joint optimization ##
     if ifRender==True: test_const_adv(env, pro_policy, path_length=path_length, n_traj = 1, render=True)
     pro_rews = []
     adv_rews = []
     all_rews = []
     const_testing_rews = []
-    const_testing_rews.append(test_const_adv(env, pro_policy, path_length=path_length))
+    const_testing_rews.append(test_const_adv(env_orig, pro_policy, path_length=path_length))
     rand_testing_rews = []
-    rand_testing_rews.append(test_rand_adv(env, pro_policy, path_length=path_length))
+    rand_testing_rews.append(test_rand_adv(env_orig, pro_policy, path_length=path_length))
     step_testing_rews = []
-    step_testing_rews.append(test_step_adv(env, pro_policy, path_length=path_length))
+    step_testing_rews.append(test_step_adv(env_orig, pro_policy, path_length=path_length))
     rand_step_testing_rews = []
-    rand_step_testing_rews.append(test_rand_step_adv(env, pro_policy, path_length=path_length))
+    rand_step_testing_rews.append(test_rand_step_adv(env_orig, pro_policy, path_length=path_length))
     adv_testing_rews = []
     adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
     #embed()
@@ -167,10 +151,6 @@ for ne in range(n_exps):
         pro_algo.train()
         pro_rews += pro_algo.rews; all_rews += pro_algo.rews;
         logger.log('Protag Reward: {}'.format(np.array(pro_algo.rews).mean()))
-        if ni%adv_step==0:
-            adv_algo.train()
-            adv_rews += adv_algo.rews; all_rews += adv_algo.rews;
-            logger.log('Advers Reward: {}'.format(np.array(adv_algo.rews).mean()))
         const_testing_rews.append(test_const_adv(env, pro_policy, path_length=path_length))
         rand_testing_rews.append(test_rand_adv(env, pro_policy, path_length=path_length))
         step_testing_rews.append(test_step_adv(env, pro_policy, path_length=path_length))
@@ -193,7 +173,6 @@ for ne in range(n_exps):
 
     ## Shutting down the optimizer ##
     pro_algo.shutdown_worker()
-    adv_algo.shutdown_worker()
     const_test_rew_summary.append(const_testing_rews)
     rand_test_rew_summary.append(rand_testing_rews)
     step_test_rew_summary.append(step_testing_rews)

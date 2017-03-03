@@ -45,6 +45,9 @@ class StepControlPolicy(Policy, Serializable):
     def get_params_internal(self, **tags):
         return []
 
+    def get_param_values(self, **tags):
+        return []
+
     def get_actions(self, observations):
         raise NotImplementedError
 
