@@ -45,8 +45,6 @@ args = parser.parse_args()
 env_name = args.env
 adv_name = args.adv_name
 pro_path_name = args.pro_path
-if 'p.temp' in pro_path_name:
-	exit()
 path_length = args.path_length
 layer_size = tuple(args.layer_size)
 ifRender = bool(args.if_render)
