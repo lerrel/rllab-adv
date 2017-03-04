@@ -49,9 +49,9 @@ if args.g == 1:
 
 plt.legend(handles=all_patches)
 axes = plt.gca()
-axes.set_ylim([0,1200])
+axes.set_ylim([-500,10000])
 #axes.set_ylim([0,400])
 plt.title(savename)
 axes.yaxis.tick_right()
-#plt.show()
-from IPython import embed;embed()
+plt.show()
+#from IPython import embed;embed()

@@ -32,31 +32,6 @@ def test_mass_rob(test_type, file_name, env_name, mass_fractions=np.linspace(0.5
 
     return test_rew_summary, test_rew_std_summary, mass_vals
 
-def test_mass_rob_epopt(test_type, file_name, env_name, mass_fractions=np.linspace(0.5,1.5,11),mass_bodies=[b'pole'], adv_fraction=1.0, n_traj=5):
-    mass_vals = []
-    test_rew_summary = []
-    test_rew_std_summary = []
-    print(file_name)
-    res_D = pickle.load(open(file_name,'rb'))
-    P = res_D['pol']
-    for mf in mass_fractions:
-        env = GymEnv(env_name, 1.0)
-        me = np.array(env.env.model.body_mass)
-        mass_ind = env.env.model.body_names.index(mass_bodies[0])
-        me[mass_ind,0] = me[mass_ind,0]*mf
-        env.env.model.body_mass = me
-
-        N = np.zeros(n_traj)
-        for i in range(n_traj):
-            N[i] = test_type(env, P, 1000, 1)
-        M =N.mean(); V=N.std()
-        mass_vals.append(me[mass_ind])
-        test_rew_summary.append(M)
-        test_rew_std_summary.append(V)
-
-    return test_rew_summary, test_rew_std_summary, mass_vals
-
-
 def test_mass_rob_folder(test_type, folder_name, env_name, mass_fractions=np.linspace(0.5,1.5,11),mass_bodies=[b'pole'], adv_fraction=1.0, n_traj=5):
     L = os.listdir(folder_name)
     file_name_summary = []
