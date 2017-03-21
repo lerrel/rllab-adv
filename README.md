@@ -1,4 +1,22 @@
 # Under Development
+# Robust Adversarial Reinforcement Learning
+
+This repo contains code for training RL agents with adversarial disturbance agents in our work on Robust Adversarial Reinforcement Learning ([RARL](https://arxiv.org/abs/1703.02702)). We build heavily build on the OpenAI rllab repo.
+
+## Installation instructions
+
+- Dependencies for scipy:
+
+```
+sudo apt-get build-dep python-scipy
+```
+
+- Install python modules:
+
+```
+conda env create -f environment.yml
+```
+
 
 [![Docs](https://readthedocs.org/projects/rllab/badge)](http://rllab.readthedocs.org/en/latest/)
 [![Circle CI](https://circleci.com/gh/rllab/rllab.svg?style=shield)](https://circleci.com/gh/rllab/rllab)
