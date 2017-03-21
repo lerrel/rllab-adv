@@ -3,9 +3,12 @@ from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.envs.gym_env import GymEnv
 from rllab.envs.normalized_env import normalize
 from rllab.policies.gaussian_mlp_policy import GaussianMLPPolicy
-import rllab.misc.logger as logger
-from rllab.sampler import parallel_sampler
+from rllab.policies.random_uniform_control_policy import RandomUniformControlPolicy
+from rllab.policies.constant_control_policy import ConstantControlPolicy
+from rllab.policies.step_control_policy import StepControlPolicy
+from IPython import embed
 import matplotlib.pyplot as plt
+import rllab.misc.logger as logger
 import numpy as np
 from test import test_const_adv, test_rand_adv, test_learnt_adv, test_rand_step_adv, test_step_adv
 import pickle
@@ -13,31 +16,32 @@ import argparse
 import os
 import gym
 import random
-#from IPython import embed
 
 ## Pass arguments ##
 parser = argparse.ArgumentParser()
 parser.add_argument('--env', type=str, required=True, help='Name of adversarial environment')
+parser.add_argument('--adv_name', type=str, required=True, help='adv if training with adversary, no_adv if training without adversary')
 parser.add_argument('--path_length', type=int, default=1000, help='maximum episode length')
 parser.add_argument('--layer_size', nargs='+', type=int, default=[100,100,100], help='layer definition')
-parser.add_argument('--if_render', type=int, default=0, help='Should we render?')
+parser.add_argument('--if_render', type=int, default=0, help='Should we animate at all?')
 parser.add_argument('--after_render', type=int, default=100, help='After how many to animate')
-parser.add_argument('--n_exps', type=int, default=1, help='Number of training instances to run')
-parser.add_argument('--n_itr', type=int, default=100, help='Number of iterations of the alternating optimization')
-parser.add_argument('--n_pro_itr', type=int, default=1, help='Number of iterations for the portagonist')
-parser.add_argument('--n_adv_itr', type=int, default=1, help='Number of interations for the adversary')
-parser.add_argument('--batch_size', type=int, default=4000, help='Number of training samples for each iteration')
-parser.add_argument('--save_every', type=int, default=100, help='Save checkpoint every save_every iterations')
-parser.add_argument('--n_process', type=int, default=16, help='Number of parallel threads for sampling environment')
+parser.add_argument('--n_exps', type=int, default=3, help='')
+parser.add_argument('--n_itr', type=int, default=100, help='')
+parser.add_argument('--n_pro_itr', type=int, default=1, help='')
+parser.add_argument('--n_adv_itr', type=int, default=1, help='')
+parser.add_argument('--batch_size', type=int, default=4000, help='')
+parser.add_argument('--save_every', type=int, default=100, help='')
+parser.add_argument('--n_process', type=int, default=16, help='Number of threads for sampling environment')
 parser.add_argument('--adv_fraction', type=float, default=1.0, help='fraction of maximum adversarial force to be applied')
-parser.add_argument('--step_size', type=float, default=0.01, help='kl step size for TRPO')
+parser.add_argument('--step_size', type=float, default=0.01, help='step size for learner')
 parser.add_argument('--gae_lambda', type=float, default=0.97, help='gae_lambda for learner')
-parser.add_argument('--folder', type=str, default=os.environ['HOME'], help='folder to save result in')
+parser.add_argument('--folder', type=str, default=os.environ['HOME']+'/results/variable_adversary', help='folder to save result in')
 
-
-## Parsing Arguments ##
 args = parser.parse_args()
+
+## Number of experiments to run ##
 env_name = args.env
+adv_name = args.adv_name
 path_length = args.path_length
 layer_size = tuple(args.layer_size)
 ifRender = bool(args.if_render)
@@ -52,26 +56,22 @@ n_process = args.n_process
 adv_fraction = args.adv_fraction
 step_size = args.step_size
 gae_lambda = args.gae_lambda
-save_dir = args.folder
+save_dir = args.folder 
 
-## Initializing summaries for the tests ##
 const_test_rew_summary = []
 rand_test_rew_summary = []
 step_test_rew_summary = []
 rand_step_test_rew_summary = []
 adv_test_rew_summary = []
-
-## Preparing file to save results in ##
-save_prefix = 'env-{}_Exp{}_Itr{}_BS{}_Adv{}_stp{}_lam{}_{}'.format(env_name, n_exps, n_itr, batch_size, adv_fraction, step_size, gae_lambda, random.randint(0,1000000))
+save_prefix = 'env-{}_{}_Exp{}_Itr{}_BS{}_Adv{}_stp{}_lam{}_{}'.format(env_name, adv_name, n_exps, n_itr, batch_size, adv_fraction, step_size, gae_lambda, random.randint(0,1000000))
+fig_dir = 'figs'
 save_name = save_dir+'/'+save_prefix+'.p'
+fig_name = fig_dir+'/'+save_prefix+'.png'
 
-## Looping over experiments to carry out ##
 for ne in range(n_exps):
     ## Environment definition ##
-    ## The second argument in GymEnv defines the relative magnitude of adversary. For testing we set this to 1.0.
     env = normalize(GymEnv(env_name, adv_fraction))
     env_orig = normalize(GymEnv(env_name, 1.0))
-
     ## Protagonist policy definition ##
     pro_policy = GaussianMLPPolicy(
         env_spec=env.spec,
@@ -95,24 +95,39 @@ for ne in range(n_exps):
     )
     adv_baseline = LinearFeatureBaseline(env_spec=env.spec)
 
-    ## Initializing the parallel sampler ##
-    parallel_sampler.initialize(n_process)
-
     ## Optimizer for the Protagonist ##
-    pro_algo = TRPO(
-        env=env,
-        pro_policy=pro_policy,
-        adv_policy=adv_policy,
-        pro_baseline=pro_baseline,
-        adv_baseline=adv_baseline,
-        batch_size=batch_size,
-        max_path_length=path_length,
-        n_itr=n_pro_itr,
-        discount=0.995,
-        gae_lambda=gae_lambda,
-        step_size=step_size,
-        is_protagonist=True
-    )
+    from rllab.sampler import parallel_sampler
+    parallel_sampler.initialize(n_process)
+    if adv_name=='adv':
+        pro_algo = TRPO(
+            env=env,
+            pro_policy=pro_policy,
+            adv_policy=adv_policy,
+            pro_baseline=pro_baseline,
+            adv_baseline=adv_baseline,
+            batch_size=batch_size,
+            max_path_length=path_length,
+            n_itr=n_pro_itr,
+            discount=0.995,
+            gae_lambda=gae_lambda,
+            step_size=step_size,
+            is_protagonist=True
+        )
+    elif adv_name=='no_adv':
+        pro_algo = TRPO(
+            env=env,
+            pro_policy=pro_policy,
+            adv_policy=zero_adv_policy,
+            pro_baseline=pro_baseline,
+            adv_baseline=adv_baseline,
+            batch_size=batch_size,
+            max_path_length=path_length,
+            n_itr=n_pro_itr,
+            discount=0.995,
+            gae_lambda=gae_lambda,
+            step_size=step_size,
+            is_protagonist=True
+        )
 
     ## Optimizer for the Adversary ##
     adv_algo = TRPO(
@@ -131,7 +146,8 @@ for ne in range(n_exps):
         scope='adversary_optim'
     )
 
-    ## Setting up summaries for testing for a specific training instance ##
+    ## Joint optimization ##
+    if ifRender==True: test_const_adv(env, pro_policy, path_length=path_length, n_traj = 1, render=True)
     pro_rews = []
     adv_rews = []
     all_rews = []
@@ -145,30 +161,25 @@ for ne in range(n_exps):
     rand_step_testing_rews.append(test_rand_step_adv(env_orig, pro_policy, path_length=path_length))
     adv_testing_rews = []
     adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
-
-    ## Beginning alternating optimization ##
+    #embed()
+    
     for ni in range(n_itr):
-        logger.log('\n\n\n####expNO{} global itr# {} n_pro_itr# {}####\n\n\n'.format(ne,ni,args.n_pro_itr))
-        ## Train protagonist
+        logger.log('\n\n\n####expNO{}_{} global itr# {} n_pro_itr# {}####\n\n\n'.format(ne,adv_name,ni,args.n_pro_itr))
         pro_algo.train()
         pro_rews += pro_algo.rews; all_rews += pro_algo.rews;
         logger.log('Protag Reward: {}'.format(np.array(pro_algo.rews).mean()))
-        ## Train Adversary
         adv_algo.train()
         adv_rews += adv_algo.rews; all_rews += adv_algo.rews;
         logger.log('Advers Reward: {}'.format(np.array(adv_algo.rews).mean()))
-        ## Test the learnt policies
         const_testing_rews.append(test_const_adv(env, pro_policy, path_length=path_length))
         rand_testing_rews.append(test_rand_adv(env, pro_policy, path_length=path_length))
         step_testing_rews.append(test_step_adv(env, pro_policy, path_length=path_length))
         rand_step_testing_rews.append(test_rand_step_adv(env, pro_policy, path_length=path_length))
         adv_testing_rews.append(test_learnt_adv(env, pro_policy, adv_policy, path_length=path_length))
-
         if ni%afterRender==0 and ifRender==True:
             test_const_adv(env, pro_policy, path_length=path_length, n_traj=1, render=True);
-
         if ni!=0 and ni%save_every==0:
-            ## SAVING CHECKPOINT INFO ##
+            ## SAVING INFO ##
             pickle.dump({'args': args,
                          'pro_policy': pro_policy,
                          'adv_policy': adv_policy,
@@ -183,8 +194,6 @@ for ne in range(n_exps):
     ## Shutting down the optimizer ##
     pro_algo.shutdown_worker()
     adv_algo.shutdown_worker()
-
-    ## Updating the test summaries over all training instances
     const_test_rew_summary.append(const_testing_rews)
     rand_test_rew_summary.append(rand_testing_rews)
     step_test_rew_summary.append(step_testing_rews)

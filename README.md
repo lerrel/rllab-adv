@@ -17,6 +17,11 @@ sudo apt-get build-dep python-scipy
 conda env create -f environment.yml
 ```
 
+- Add `rllab-adv` to your `PYTHONPATH`
+
+```
+export PYTHONPATH=$HOME/rllab-adv:$PYTHONPATH
+```
 
 [![Docs](https://readthedocs.org/projects/rllab/badge)](http://rllab.readthedocs.org/en/latest/)
 [![Circle CI](https://circleci.com/gh/rllab/rllab.svg?style=shield)](https://circleci.com/gh/rllab/rllab)
