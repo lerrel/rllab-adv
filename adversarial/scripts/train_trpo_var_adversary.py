@@ -3,6 +3,7 @@ from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.envs.gym_env import GymEnv
 from rllab.envs.normalized_env import normalize
 from rllab.policies.gaussian_mlp_policy import GaussianMLPPolicy
+from rllab.policies.constant_control_policy import ConstantControlPolicy
 import rllab.misc.logger as logger
 from rllab.sampler import parallel_sampler
 import matplotlib.pyplot as plt
