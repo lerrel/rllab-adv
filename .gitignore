@@ -1,4 +1,5 @@
 data
+*.p
 *.pyc
 *-checkpoint.ipynb
 .DS_Store

@@ -1,4 +1,4 @@
-# Under Development
+>Under Development
 # Robust Adversarial Reinforcement Learning
 
 This repo contains code for training RL agents with adversarial disturbance agents in our work on Robust Adversarial Reinforcement Learning ([RARL](https://arxiv.org/abs/1703.02702)). We build heavily build on the OpenAI rllab repo.
@@ -21,10 +21,10 @@ conda env create -f environment.yml
 
 - [Install MuJoCo](https://github.com/openai/mujoco-py)
 
-- Add `rllab-adv` to your `PYTHONPATH`
+- Add `rllab-adv` to your `PYTHONPATH`.
 
 ```
-export PYTHONPATH=$HOME/rllab-adv:$PYTHONPATH
+export PYTHONPATH=<PATH_TO_RLLAB_ADV>:$PYTHONPATH
 ```
 
 ## Example
@@ -33,7 +33,7 @@ export PYTHONPATH=$HOME/rllab-adv:$PYTHONPATH
 # Enter the anaconda virtual environment
 source activate rllab3-adv
 # Train on InvertedPendulum
-python adversarial/scripts/train_adversary.py --env InvertedPendulumAdv-v1 --folder ~/rllab/results
+python adversarial/scripts/train_adversary.py --env InvertedPendulumAdv-v1 --folder ~/rllab-adv/results
 ```
 
 ## Contact
