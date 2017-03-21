@@ -37,3 +37,5 @@ blackbox
 rllab/config_personal.py
 *.swp
 sandbox
+adversarial/figs
+adversarial/figs/*
